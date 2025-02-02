@@ -18,8 +18,14 @@ typedef enum {
     TOKEN_EOF,
     TOKEN_NUMBER,     // e.g., "123", "456"
     TOKEN_OPERATOR,   // e.g., "+", "-"
+    TOKEN_KEYWORD,    // e.g., "if", "repeat", "until"
+    TOKEN_IDENTIFIER, // e.g., variable names: "x", "y", "someVar"
+    TOKEN_STRING,     // e.g., "hello world"
+    TOKEN_DELIMITER,  // e.g., ";", "(", ")"
+    TOKEN_COMMENT,    // e.g., "// comment"
     TOKEN_ERROR
 } TokenType;
+
 
 /* Error types for lexical analysis
  * TODO: Add more error types as needed for your language - as much as you like !!
