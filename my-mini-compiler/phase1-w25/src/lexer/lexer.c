@@ -9,6 +9,9 @@
 static int current_line = 1;
 static char last_token_type = 'x'; // For checking consecutive operators
 
+// TODO: we need a better handler, tokenizers/lexers should have their own class tbh
+// This way it would be easier to manage like creating a simple iterator for tokens
+
 /* Print error messages for lexical errors */
 void print_error(ErrorType error, int line, const char *lexeme) {
     printf("Lexical Error at line %d: ", line);
@@ -87,7 +90,13 @@ int is_keyword(const char *word) {
 
 // Get next token from input
 Token get_next_token(const char *input, int *pos) {
-    Token token = {TOKEN_ERROR, "", current_line, ERROR_NONE};
+    Token token;
+    token.type = TOKEN_ERROR;
+    token.lexeme = NULL;
+    token.size = 0;
+    token.line = current_line;
+    token.error = ERROR_NONE;
+
     char c;
 
     // Skip whitespace and track line numbers
@@ -98,90 +107,83 @@ Token get_next_token(const char *input, int *pos) {
         (*pos)++;
     }
 
+    // "EOF" + null terminator, so size is "EOF" + 1
     if (input[*pos] == '\0') {
         token.type = TOKEN_EOF;
-        strcpy(token.lexeme, "EOF");
+        token.size = 4;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) strcpy(token.lexeme, "EOF");
         return token;
     }
 
     c = input[*pos];
 
     // Handle numbers (detect invalid identifiers like "123abc")
+    // I made it so that it dynamic allocates large numbers as well
+    // We can define later on during symantics if the numbers are too large for a datatype
     if (isdigit(c)) {
-        int i = 0;
-        do {
-            token.lexeme[i++] = c;
-            (*pos)++;
-            c = input[*pos];
-        } while (isdigit(c) && i < sizeof(token.lexeme) - 1);
+        int start = *pos;
+        while (isdigit(input[*pos])) (*pos)++;
 
-        token.lexeme[i] = '\0';
+        token.size = (*pos - start) + 1;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) strncpy(token.lexeme, &input[start], token.size - 1);
+        token.lexeme[token.size - 1] = '\0';
         token.type = TOKEN_NUMBER;
 
         // If next character is alphabetic, mark as error (invalid identifier)
         if (isalpha(input[*pos])) {
             token.error = ERROR_INVALID_CHAR;
         }
+        
         return token;
     }
 
     // Handle keywords and identifiers
     if (isalpha(c)) {
-        int i = 0;
-        do {
-            token.lexeme[i++] = c;
-            (*pos)++;
-            c = input[*pos];
-        } while ((isalnum(c) || c == '_') && i < sizeof(token.lexeme) - 1);
+        int start = *pos;
+        while (isalnum(input[*pos]) || input[*pos] == '_') (*pos)++;
 
-        token.lexeme[i] = '\0';
+        token.size = (*pos - start) + 1;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) strncpy(token.lexeme, &input[start], token.size - 1);
+        token.lexeme[token.size - 1] = '\0';
 
-        // Check if it's a keyword or identifier
-        if (is_keyword(token.lexeme)) {
-            token.type = TOKEN_KEYWORD;
-        } else {
-            token.type = TOKEN_IDENTIFIER;
-        }
+        token.type = is_keyword(token.lexeme) ? TOKEN_KEYWORD : TOKEN_IDENTIFIER;
         return token;
     }
 
     // Handle operators including '='
     if (c == '+' || c == '-' || c == '=') {
+        token.size = 2;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) {
+            token.lexeme[0] = c;
+            token.lexeme[1] = '\0';
+        }
         token.type = TOKEN_OPERATOR;
-        token.lexeme[0] = c;
-        token.lexeme[1] = '\0';
         (*pos)++;
         return token;
     }
 
     // Handle string literals
     if (c == '"') {
-        int i = 0;
-        token.type = TOKEN_STRING;
-        (*pos)++; // Move past opening quote
-
-        while (input[*pos] != '"' && input[*pos] != '\0' && i < sizeof(token.lexeme) - 2) {
-            if (input[*pos] == '\\' && (input[*pos + 1] == '"' || input[*pos + 1] == '\\')) {
-                // Handle escape sequences (e.g., \" or \\)
-                token.lexeme[i++] = input[*pos];
-                (*pos)++;
-            }
-            token.lexeme[i++] = input[*pos];
-            (*pos)++;
-
-            if (input[*pos] == '\n') {
-                token.error = ERROR_INVALID_CHAR; // Strings shouldn't span multiple lines
-                strcpy(token.lexeme, "Unterminated string");
-                return token;
-            }
-        }
+        (*pos)++;
+        int start = *pos;
+        while (input[*pos] != '"' && input[*pos] != '\0' && input[*pos] != '\n') (*pos)++;
 
         if (input[*pos] == '"') {
-            token.lexeme[i] = '\0';
-            (*pos)++; // Move past closing quote
+            token.size = (*pos - start) + 1;
+            token.lexeme = malloc(token.size);
+            if (token.lexeme) strncpy(token.lexeme, &input[start], token.size - 1);
+            token.lexeme[token.size - 1] = '\0';
+            (*pos)++;
+            token.type = TOKEN_STRING;
         } else {
-            token.error = ERROR_INVALID_CHAR; // Unterminated string
-            strcpy(token.lexeme, "Unterminated string");
+            token.error = ERROR_INVALID_CHAR;
+            token.size = 20;
+            token.lexeme = malloc(token.size);
+            if (token.lexeme) strcpy(token.lexeme, "Unterminated string");
         }
         return token;
     }
@@ -190,8 +192,12 @@ Token get_next_token(const char *input, int *pos) {
     // Handle delimiters (e.g., ';')
     if (c == ';') {
         token.type = TOKEN_DELIMITER;
-        token.lexeme[0] = c;
-        token.lexeme[1] = '\0';
+        token.size = 2;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) {
+            token.lexeme[0] = c;
+            token.lexeme[1] = '\0';
+        }
         (*pos)++;
         return token;
     }
@@ -223,14 +229,20 @@ Token get_next_token(const char *input, int *pos) {
 
         // If we reach here, the comment was never closed
         token.error = ERROR_INVALID_CHAR;
-        strcpy(token.lexeme, "Unterminated comment");
+        token.size = 20;
+        token.lexeme = malloc(token.size);
+        if (token.lexeme) strcpy(token.lexeme, "Unterminated string");
         return token;
     }
 
     // Handle invalid characters
     token.error = ERROR_INVALID_CHAR;
-    token.lexeme[0] = c;
-    token.lexeme[1] = '\0';
+    token.size = 2;
+    token.lexeme = malloc(token.size);
+    if (token.lexeme) {
+        token.lexeme[0] = c;
+        token.lexeme[1] = '\0';
+    }
     (*pos)++;
     return token;
 }

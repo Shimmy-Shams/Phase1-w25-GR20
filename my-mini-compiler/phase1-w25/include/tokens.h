@@ -43,8 +43,9 @@ typedef enum {
  * Don't forget to update the token fields in lexer.c as well
  */
 typedef struct {
-    TokenType type;
-    char lexeme[100];   // Actual text of the token
+    TokenType type;     // Token type, defines what behaviors should be considered during AST generation
+    char* lexeme;       // Actual text of the token
+    unsigned int size;  // Size of lexeme, used in dynamic allocation
     int line;           // Line number in source file
     ErrorType error;    // Error type if any
 } Token;

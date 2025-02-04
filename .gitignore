@@ -1,0 +1,6 @@
+*.exe
+*.ninja*
+*.cmake
+CMakeCache.txt
+CMakeFiles
+cmake-build-debug
