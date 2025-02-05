@@ -10,6 +10,24 @@ The goal of this phase was to implement a lexer that:
 - Handles comments and string literals.
 - Reports lexical errors such as invalid identifiers and unterminated strings.
 
+## Design Decisions
+
+#### Distinguishing Between Keywords and Identifiers
+- The lexer first checks if a sequence of characters matches a keyword.
+- If not, it is treated as an identifier.
+- Implemented using a keyword lookup function (`is_keyword()`).
+
+#### Multi-Character Operators
+- The lexer does not currently support `==`, `!=`, `<=`, `>=`, but they can be added by modifying the operator recognition logic.
+
+#### Error Messages
+- Errors are reported with line numbers and descriptions.
+- Example: `Lexical Error at line 3: Unterminated string`.
+
+#### Handling Comments
+- The lexer skips over single-line (`//`) and multi-line (`/* */`) comments.
+- If a multi-line comment is not closed, an error is generated.
+
 ## **Features Implemented**
 ### **Token Recognition**
 The lexer correctly identifies the following token types:
