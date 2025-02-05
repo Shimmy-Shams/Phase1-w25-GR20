@@ -74,21 +74,53 @@ The lexer correctly identifies the following token types:
 ## **Test Cases**
 Example valid input:
 ```
-if x = 10;
-y = "Hello, world!";
-// This is a comment
-/* Multi-line comment */
+"123 + 456 - 789\n"
+"if repeat until x = 10;\n"
+"someVariable another_var 123abc\n"
+"\"Hello, world!\" \"Unclosed string\n"
+"// This is a comment\n"
+"/* Multi-line comment\nstill inside */\n"
+"y = \"escaped \\\"quotes\\\" inside\";\n"
+"/* Unterminated comment starts here..."
 ```
 Expected Output:
 ```
-Token: KEYWORD | Lexeme: 'if'
-Token: IDENTIFIER | Lexeme: 'x'
-Token: OPERATOR | Lexeme: '='
-Token: NUMBER | Lexeme: '10'
-Token: DELIMITER | Lexeme: ';'
-Token: IDENTIFIER | Lexeme: 'y'
-Token: OPERATOR | Lexeme: '='
-Token: STRING | Lexeme: 'Hello, world!'
-Token: DELIMITER | Lexeme: ';'
-Token: EOF | Lexeme: 'EOF'
+Analyzing input:
+123 + 456 - 789
+if repeat until x = 10;
+someVariable another_var 123abc
+"Hello, world!" "Unclosed string
+// This is a comment
+/* Multi-line comment
+still inside /
+y = "escaped "quotes" inside";
+/ Unterminated comment starts here...
+
+Token: NUMBER | Lexeme: '123' | Line: 1
+Token: OPERATOR | Lexeme: '+' | Line: 1
+Token: NUMBER | Lexeme: '456' | Line: 1
+Token: OPERATOR | Lexeme: '-' | Line: 1
+Token: NUMBER | Lexeme: '789' | Line: 1
+Token: KEYWORD | Lexeme: 'if' | Line: 1
+Token: KEYWORD | Lexeme: 'repeat' | Line: 2
+Token: KEYWORD | Lexeme: 'until' | Line: 2
+Token: IDENTIFIER | Lexeme: 'x' | Line: 2
+Token: OPERATOR | Lexeme: '=' | Line: 2
+Token: NUMBER | Lexeme: '10' | Line: 2
+Token: DELIMITER | Lexeme: ';' | Line: 2
+Token: IDENTIFIER | Lexeme: 'someVariable' | Line: 2
+Token: IDENTIFIER | Lexeme: 'another_var' | Line: 3
+Lexical Error at line 3: Invalid character '123'
+Token: IDENTIFIER | Lexeme: 'abc' | Line: 3
+Token: STRING | Lexeme: 'Hello, world!' | Line: 3
+Lexical Error at line 4: Invalid character 'Unterminated string'
+Token: IDENTIFIER | Lexeme: 'y' | Line: 7
+Token: OPERATOR | Lexeme: '=' | Line: 8
+Token: STRING | Lexeme: 'escaped ' | Line: 8
+Token: IDENTIFIER | Lexeme: 'quotes' | Line: 8
+Lexical Error at line 8: Invalid character ''
+Token: STRING | Lexeme: ' inside' | Line: 8
+Token: DELIMITER | Lexeme: ';' | Line: 8
+Lexical Error at line 8: Invalid character 'Unterminated string'
+Token: EOF | Lexeme: 'EOF' | Line: 9
 ```
